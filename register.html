@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Admin Emergency Register</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caacupe+One&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <main class="login-page register-page">
+        <section class="emergency-login emergency-register" aria-labelledby="register-title">
+            <p class="login-eyebrow">CREATE ACCOUNT</p>
+            <h1 id="register-title">Admin Registration</h1>
+            <p class="login-description">Register to gain access to the emergency management dashboard.</p>
+            <form id="registerForm" novalidate>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="firstName" class="form-label">First Name</label>
+                        <input type="text" class="form-control" id="firstName" placeholder="Enter first name" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="lastName" class="form-label">Last Name</label>
+                        <input type="text" class="form-control" id="lastName" placeholder="Enter last name" required>
+                    </div>
+                </div>
+
+                <div class="mb-3 mt-3">
+                    <label for="register-email" class="form-label">Admin Email <svg xmlns="http://www.w3.org/2000/svg" width="16"
+                            height="16" fill="currentColor" class="bi bi-envelope" viewBox="0 0 16 16">
+                            <path
+                                d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm2-1a1 1 0 0 0-1 1v.217l7 4.2 7-4.2V4a1 1 0 0 0-1-1zm13 2.383-4.708 2.825L15 11.105zm-.034 6.876-5.64-3.471L8 9.583l-1.326-.795-5.64 3.47A1 1 0 0 0 2 13h12a1 1 0 0 0 .966-.741M1 11.105l4.708-2.897L1 5.383z" />
+                        </svg></label>
+                    <input type="email" class="form-control" id="register-email" placeholder="Enter your admin email" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="register-password" class="form-label">Password <svg xmlns="http://www.w3.org/2000/svg"
+                            width="16" height="16" fill="currentColor" class="bi bi-lock" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd"
+                                d="M8 0a4 4 0 0 1 4 4v2.05a2.5 2.5 0 0 1 2 2.45v5a2.5 2.5 0 0 1-2.5 2.5h-7A2.5 2.5 0 0 1 2 13.5v-5a2.5 2.5 0 0 1 2-2.45V4a4 4 0 0 1 4-4M4.5 7A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7zM8 1a3 3 0 0 0-3 3v2h6V4a3 3 0 0 0-3-3" />
+                        </svg></label>
+                    <input type="password" class="form-control" id="register-password" placeholder="Create a password" required minlength="8">
+                </div>
+
+                <div class="mb-3">
+                    <label for="confirm-password" class="form-label">Confirm Password</label>
+                    <input type="password" class="form-control" id="confirm-password" placeholder="Re-enter your password" required>
+                </div>
+
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="termsCheck" required>
+                    <label class="form-check-label" for="termsCheck">I agree to the terms and conditions</label>
+                </div>
+
+                <button type="submit" class="btn btn-primary login-button">Register</button>
+                <p class="auth-switch">
+                    Already have an account?
+                    <a href="login.html">Login here</a>
+                </p>
+            </form>
+        </section>
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+        crossorigin="anonymous"></script>
+    <script>
+        const form = document.getElementById('registerForm');
+        const firstName = document.getElementById('firstName');
+        const lastName = document.getElementById('lastName');
+        const email = document.getElementById('register-email');
+        const password = document.getElementById('register-password');
+        const confirmPassword = document.getElementById('confirm-password');
+        const terms = document.getElementById('termsCheck');
+
+        function showError(input, message) {
+            input.classList.add('is-invalid');
+            input.classList.remove('is-valid');
+
+            let error = input.nextElementSibling;
+            if (!error || !error.classList.contains('invalid-feedback')) {
+                error = document.createElement('div');
+                error.className = 'invalid-feedback';
+                input.parentNode.insertBefore(error, input.nextSibling);
+            }
+            error.textContent = message;
+        }
+
+        function showSuccess(input) {
+            input.classList.remove('is-invalid');
+            input.classList.add('is-valid');
+
+            const error = input.nextElementSibling;
+            if (error && error.classList.contains('invalid-feedback')) {
+                error.textContent = '';
+            }
+        }
+
+        function validateField(input, condition, message) {
+            if (!condition) {
+                showError(input, message);
+                return false;
+            }
+            showSuccess(input);
+            return true;
+        }
+
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            let isValid = true;
+
+            isValid = validateField(firstName, firstName.value.trim() !== '', 'First name is required.') && isValid;
+            isValid = validateField(lastName, lastName.value.trim() !== '', 'Last name is required.') && isValid;
+            isValid = validateField(email, email.value.trim() !== '' && email.checkValidity(), 'Please enter a valid admin email.') && isValid;
+            isValid = validateField(password, password.value.length >= 8, 'Password must be at least 8 characters long.') && isValid;
+            isValid = validateField(confirmPassword, confirmPassword.value === password.value && confirmPassword.value !== '', 'Passwords do not match.') && isValid;
+            isValid = validateField(terms, terms.checked, 'You must agree to the terms and conditions.') && isValid;
+
+            if (isValid) {
+                alert('Registration successful!');
+                window.location.href = 'index.html';
+            }
+        });
+    </script>
+</body>
+
+</html>

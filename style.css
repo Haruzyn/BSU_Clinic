@@ -9,7 +9,7 @@ body {
     color: var(--ink);
     background:
         linear-gradient(rgba(8, 18, 32, 0.66), rgba(8, 18, 32, 0.66)),
-        url("bg.jpg") center / cover no-repeat fixed;
+        url("images/bg.jpg") center / cover no-repeat fixed;
     font-family: Arial, sans-serif;
 }
 
@@ -79,6 +79,50 @@ h1 {
 .login-button:hover,
 .login-button:focus {
     background: #a61e1e;
+}
+
+.auth-switch {
+    margin: 16px 0 0;
+    color: #4b5563;
+    text-align: center;
+    font-size: 0.92rem;
+}
+
+.auth-switch a {
+    color: var(--emergency-red);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.auth-switch a:hover {
+    text-decoration: underline;
+}
+
+.invalid-feedback {
+    display: block;
+    margin-top: 6px;
+    color: #dc3545;
+    font-size: 0.8rem;
+}
+
+.form-control.is-invalid,
+.form-check-input.is-invalid {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.15);
+}
+
+.form-control.is-valid {
+    border-color: #198754;
+    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.15);
+}
+
+.register-page {
+    padding-top: 30px;
+    padding-bottom: 30px;
+}
+
+.emergency-register {
+    width: min(100%, 560px);
 }
 
 @media (max-width: 480px) {
