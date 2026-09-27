@@ -1,0 +1,87 @@
+:root {
+    --emergency-red: #c92a2a;
+    --ink: #1f2937;
+}
+
+body {
+    min-height: 100vh;
+    margin: 0;
+    color: var(--ink);
+    background:
+        linear-gradient(rgba(8, 18, 32, 0.66), rgba(8, 18, 32, 0.66)),
+        url("bg.jpg") center / cover no-repeat fixed;
+    font-family: Arial, sans-serif;
+}
+
+.login-page {
+    display: grid;
+    min-height: 100vh;
+    padding: 24px;
+    place-items: center;
+    place-content: center;
+    grid-template-columns: minmax(0, 460px);
+    gap: 32px;
+}
+
+.emergency-login {
+    width: min(100%, 460px);
+    padding: 38px;
+    background: rgba(255, 255, 255, 0.96);
+    border-top: 5px solid var(--emergency-red);
+    border-radius: 14px;
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.28);
+}
+
+.login-eyebrow {
+    margin: 0 0 8px;
+    color: var(--emergency-red);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+}
+
+h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+.login-description {
+    margin: 8px 0 28px;
+    color: #6b7280;
+}
+
+.form-control {
+    padding: 0.7rem 0.85rem;
+}
+
+/* Keep the label text and its icon on one aligned row. */
+.emergency-login .form-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.emergency-login .form-label svg {
+    display: block;
+    flex: 0 0 16px;
+}
+
+.login-button {
+    width: 100%;
+    margin-top: 24px;
+    padding: 0.7rem;
+    border: 0;
+    background: var(--emergency-red);
+    font-weight: 600;
+}
+
+.login-button:hover,
+.login-button:focus {
+    background: #a61e1e;
+}
+
+@media (max-width: 480px) {
+    .login-page { padding: 16px; }
+    .emergency-login { padding: 28px 22px; }
+}

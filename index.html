@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="fil">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Emergency Response | Kahandaan at Tulong</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+	<style>
+		:root {
+			--ink: #172b31;
+			--emergency: #b32632;
+		}
+
+		* { box-sizing: border-box; }
+
+		body {
+			margin: 0;
+			color: var(--ink);
+			font-family: "DM Sans", sans-serif;
+			background: #d9e4e3;
+		}
+
+		.welcome-page {
+			position: relative;
+			min-height: 100svh;
+			overflow: hidden;
+			isolation: isolate;
+			background: #d7e8e4;
+		}
+
+		.welcome-page::before,
+		.welcome-page::after {
+			position: absolute;
+			z-index: -2;
+			inset: 0;
+			content: "";
+		}
+
+		.welcome-page::before {
+			background-image: url("bg.jpg");
+			background-position: center 58%;
+			background-size: cover;
+			filter: saturate(.72) brightness(.78);
+			transform: scale(1.02);
+		}
+
+		.welcome-page::after {
+			z-index: -1;
+			background: linear-gradient(90deg, rgba(242, 247, 245, .94) 0%, rgba(235, 243, 241, .86) 50%, rgba(235, 243, 241, .54) 100%);
+		}
+
+		.site-header { min-height: 76px; }
+
+		.brand {
+			display: inline-flex;
+			align-items: center;
+			gap: 9px;
+			color: var(--ink);
+			text-decoration: none;
+			line-height: 1.05;
+		}
+
+		.brand-mark {
+			display: grid;
+			width: 38px;
+			height: 38px;
+			place-items: center;
+			border: 1px solid rgba(23, 43, 49, .45);
+			border-radius: 50% 50% 46% 54%;
+			font-family: "DM Sans", sans-serif;
+			font-weight: 700;
+			font-size: 22px;
+			transform: rotate(-8deg);
+		}
+
+		.brand-name { font-size: 9px; font-weight: 700; }
+		.brand-caption { display: block; margin-top: 3px; font-size: 7px; letter-spacing: .08em; }
+
+		.nav-link {
+			color: #24383c;
+			font-size: 13px;
+			transition: color .2s ease;
+		}
+
+		.nav-link:hover { color: #638f68; }
+
+		.trailer-button {
+			border: 0;
+			border-radius: 3px;
+			padding: 10px 15px;
+			color: white;
+			background: var(--emergency);
+			font-size: 11px;
+			transition: background .2s ease, transform .2s ease;
+		}
+
+		.trailer-button:hover { color: white; background: #861a24; transform: translateY(-1px); }
+
+		.hero-content { min-height: calc(100svh - 76px); }
+
+		.welcome-copy {
+			position: relative;
+			z-index: 2;
+			max-width: 510px;
+			padding-top: 2rem;
+			padding-bottom: 5rem;
+			animation: arrive .8s ease-out both;
+		}
+
+		.welcome-copy h1 {
+			margin: 0 0 2px;
+			font-family: "DM Sans", sans-serif;
+			font-size: clamp(22px, 3vw, 31px);
+			font-weight: 700;
+			line-height: 1.35;
+		}
+
+		.welcome-copy h2 {
+			margin: 0 0 10px;
+			font-size: clamp(23px, 3.2vw, 34px);
+			font-weight: 500;
+			letter-spacing: 0;
+			line-height: 1.1;
+		}
+
+		.welcome-copy p {
+			max-width: 455px;
+			margin: 0;
+			color: #304448;
+			font-size: 12px;
+			line-height: 1.65;
+		}
+
+		.world-stage {
+			position: absolute;
+			right: max(3vw, calc((100vw - 1180px) / 2));
+			bottom: 12%;
+			width: min(48vw, 570px);
+			animation: arrive .9s .12s ease-out both;
+		}
+
+		.world-stage::before {
+			position: absolute;
+			z-index: -1;
+			right: 4%;
+			bottom: -7%;
+			width: 92%;
+			height: 16%;
+			content: "";
+			border-radius: 50%;
+			background: rgba(67, 86, 50, .19);
+			filter: blur(24px);
+		}
+
+		.hero-image {
+			display: block;
+			width: 100%;
+			height: auto;
+			border: 4px solid rgba(255, 255, 255, .82);
+			box-shadow: 0 18px 46px rgba(29, 48, 47, .27);
+		}
+
+		@keyframes arrive {
+			from { opacity: 0; transform: translateY(12px); }
+			to { opacity: 1; transform: translateY(0); }
+		}
+
+		@keyframes arrive-centered {
+			from { opacity: 0; transform: translate(-50%, 12px); }
+			to { opacity: 1; transform: translate(-50%, 0); }
+		}
+
+		@media (min-width: 1400px) {
+			.hero-content > .container { max-width: 1180px; }
+		}
+
+		@media (max-width: 767.98px) {
+			.site-header { min-height: 68px; }
+			.hero-content { min-height: calc(100svh - 68px); align-items: flex-start !important; }
+			.welcome-copy { padding-top: 3.2rem; padding-bottom: 0; }
+			.welcome-copy p { max-width: 390px; }
+			.world-stage {
+				right: auto;
+				left: 50%;
+				bottom: 4%;
+				width: min(88vw, 430px);
+				animation-name: arrive-centered;
+			}
+		}
+
+		@media (max-width: 575.98px) {
+			.site-header .container { flex-wrap: wrap; row-gap: 10px; padding-top: 12px; padding-bottom: 10px; }
+			.site-header nav { order: 3; width: 100%; }
+			.site-header .nav { justify-content: space-between; }
+			.nav-link { padding: 4px 2px !important; font-size: 12px; }
+			.trailer-button { padding: 9px 11px; }
+			.welcome-copy { padding-top: 2.25rem; }
+			.welcome-copy h1 { font-size: 21px; }
+			.welcome-copy h2 { font-size: 25px; }
+			.welcome-copy p { max-width: 330px; font-size: 11px; }
+			.world-stage { width: min(94vw, 430px); bottom: 4%; }
+		}
+
+		@media (prefers-reduced-motion: reduce) {
+			*, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+		}
+	</style>
+</head>
+<body>
+	<main class="welcome-page">
+		<header class="site-header">
+			<div class="container d-flex align-items-center justify-content-between">
+				<a class="brand" href="#home" aria-label="Emergency Response home">
+					<span class="brand-mark" aria-hidden="true">+</span>
+					<span><span class="brand-name">EMERGENCY RESPONSE</span><span class="brand-caption">PUBLIC SAFETY</span></span>
+				</a>
+				<nav aria-label="Main navigation">
+					<ul class="nav gap-md-3">
+						<li class="nav-item"><a class="nav-link" href="#home">Home</a></li>
+						<li class="nav-item"><a class="nav-link" href="#response">Emergency</a></li>
+						<li class="nav-item"><a class="nav-link" href="#first-aid">First Aid</a></li>
+						<li class="nav-item"><a class="nav-link" href="#safety">Safety</a></li>
+						<li class="nav-item"><a class="nav-link" href="#contact">Contact</a></li>
+					</ul>
+				</nav>
+				<a class="btn trailer-button" id="contact" href="tel:911">Call 911</a>
+			</div>
+		</header>
+
+		<section class="hero-content d-flex align-items-center" id="home">
+			<div class="container">
+				<div class="welcome-copy">
+					<h1>Sa emergency, bawat segundo mahalaga.</h1>
+					<h2 id="first-aid">Mabilis na tulong. Mas ligtas na bukas.</h2>
+					<p id="safety">Sa oras ng aksidente o biglaang panganib, manatiling kalmado at kumilos agad. Tumawag sa 911 para sa agarang tulong; ibigay ang iyong lokasyon at malinaw na detalye ng pangyayari.</p>
+				</div>
+			</div>
+
+			<div class="world-stage" id="response">
+				<img class="hero-image" src="bg.jpg" alt="Ambulansya at emergency response kit sa gabi">
+			</div>
+		</section>
+	</main>
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
