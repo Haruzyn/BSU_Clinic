@@ -1,249 +1,176 @@
 <!doctype html>
-<html lang="fil">
+<html lang="en">
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>Emergency Response | Kahandaan at Tulong</title>
+	<meta name="theme-color" content="#000000">
+	<title>RESQNET | Clinic Dashboard</title>
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-	<style>
-		:root {
-			--ink: #172b31;
-			--emergency: #b32632;
-		}
-
-		* { box-sizing: border-box; }
-
-		body {
-			margin: 0;
-			color: var(--ink);
-			font-family: "DM Sans", sans-serif;
-			background: #d9e4e3;
-		}
-
-		.welcome-page {
-			position: relative;
-			min-height: 100svh;
-			overflow: hidden;
-			isolation: isolate;
-			background: #d7e8e4;
-		}
-
-		.welcome-page::before,
-		.welcome-page::after {
-			position: absolute;
-			z-index: -2;
-			inset: 0;
-			content: "";
-		}
-
-		.welcome-page::before {
-			background-image: url("bg.jpg");
-			background-position: center 58%;
-			background-size: cover;
-			filter: saturate(.72) brightness(.78);
-			transform: scale(1.02);
-		}
-
-		.welcome-page::after {
-			z-index: -1;
-			background: linear-gradient(90deg, rgba(242, 247, 245, .94) 0%, rgba(235, 243, 241, .86) 50%, rgba(235, 243, 241, .54) 100%);
-		}
-
-		.site-header { min-height: 76px; }
-
-		.brand {
-			display: inline-flex;
-			align-items: center;
-			gap: 9px;
-			color: var(--ink);
-			text-decoration: none;
-			line-height: 1.05;
-		}
-
-		.brand-mark {
-			display: grid;
-			width: 38px;
-			height: 38px;
-			place-items: center;
-			border: 1px solid rgba(23, 43, 49, .45);
-			border-radius: 50% 50% 46% 54%;
-			font-family: "DM Sans", sans-serif;
-			font-weight: 700;
-			font-size: 22px;
-			transform: rotate(-8deg);
-		}
-
-		.brand-name { font-size: 9px; font-weight: 700; }
-		.brand-caption { display: block; margin-top: 3px; font-size: 7px; letter-spacing: .08em; }
-
-		.nav-link {
-			color: #24383c;
-			font-size: 13px;
-			transition: color .2s ease;
-		}
-
-		.nav-link:hover { color: #638f68; }
-
-		.trailer-button {
-			border: 0;
-			border-radius: 3px;
-			padding: 10px 15px;
-			color: white;
-			background: var(--emergency);
-			font-size: 11px;
-			transition: background .2s ease, transform .2s ease;
-		}
-
-		.trailer-button:hover { color: white; background: #861a24; transform: translateY(-1px); }
-
-		.hero-content { min-height: calc(100svh - 76px); }
-
-		.welcome-copy {
-			position: relative;
-			z-index: 2;
-			max-width: 510px;
-			padding-top: 2rem;
-			padding-bottom: 5rem;
-			animation: arrive .8s ease-out both;
-		}
-
-		.welcome-copy h1 {
-			margin: 0 0 2px;
-			font-family: "DM Sans", sans-serif;
-			font-size: clamp(22px, 3vw, 31px);
-			font-weight: 700;
-			line-height: 1.35;
-		}
-
-		.welcome-copy h2 {
-			margin: 0 0 10px;
-			font-size: clamp(23px, 3.2vw, 34px);
-			font-weight: 500;
-			letter-spacing: 0;
-			line-height: 1.1;
-		}
-
-		.welcome-copy p {
-			max-width: 455px;
-			margin: 0;
-			color: #304448;
-			font-size: 12px;
-			line-height: 1.65;
-		}
-
-		.world-stage {
-			position: absolute;
-			right: max(3vw, calc((100vw - 1180px) / 2));
-			bottom: 12%;
-			width: min(48vw, 570px);
-			animation: arrive .9s .12s ease-out both;
-		}
-
-		.world-stage::before {
-			position: absolute;
-			z-index: -1;
-			right: 4%;
-			bottom: -7%;
-			width: 92%;
-			height: 16%;
-			content: "";
-			border-radius: 50%;
-			background: rgba(67, 86, 50, .19);
-			filter: blur(24px);
-		}
-
-		.hero-image {
-			display: block;
-			width: 100%;
-			height: auto;
-			border: 4px solid rgba(255, 255, 255, .82);
-			box-shadow: 0 18px 46px rgba(29, 48, 47, .27);
-		}
-
-		@keyframes arrive {
-			from { opacity: 0; transform: translateY(12px); }
-			to { opacity: 1; transform: translateY(0); }
-		}
-
-		@keyframes arrive-centered {
-			from { opacity: 0; transform: translate(-50%, 12px); }
-			to { opacity: 1; transform: translate(-50%, 0); }
-		}
-
-		@media (min-width: 1400px) {
-			.hero-content > .container { max-width: 1180px; }
-		}
-
-		@media (max-width: 767.98px) {
-			.site-header { min-height: 68px; }
-			.hero-content { min-height: calc(100svh - 68px); align-items: flex-start !important; }
-			.welcome-copy { padding-top: 3.2rem; padding-bottom: 0; }
-			.welcome-copy p { max-width: 390px; }
-			.world-stage {
-				right: auto;
-				left: 50%;
-				bottom: 4%;
-				width: min(88vw, 430px);
-				animation-name: arrive-centered;
-			}
-		}
-
-		@media (max-width: 575.98px) {
-			.site-header .container { flex-wrap: wrap; row-gap: 10px; padding-top: 12px; padding-bottom: 10px; }
-			.site-header nav { order: 3; width: 100%; }
-			.site-header .nav { justify-content: space-between; }
-			.nav-link { padding: 4px 2px !important; font-size: 12px; }
-			.trailer-button { padding: 9px 11px; }
-			.welcome-copy { padding-top: 2.25rem; }
-			.welcome-copy h1 { font-size: 21px; }
-			.welcome-copy h2 { font-size: 25px; }
-			.welcome-copy p { max-width: 330px; font-size: 11px; }
-			.world-stage { width: min(94vw, 430px); bottom: 4%; }
-		}
-
-		@media (prefers-reduced-motion: reduce) {
-			*, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
-		}
-	</style>
+	<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="dashboard.css">
+	<script src="dashboard.js" defer></script>
 </head>
 <body>
-	<main class="welcome-page">
-		<header class="site-header">
-			<div class="container d-flex align-items-center justify-content-between">
-				<a class="brand" href="#home" aria-label="Emergency Response home">
-					<span class="brand-mark" aria-hidden="true">+</span>
-					<span><span class="brand-name">EMERGENCY RESPONSE</span><span class="brand-caption">PUBLIC SAFETY</span></span>
-				</a>
-				<nav aria-label="Main navigation">
-					<ul class="nav gap-md-3">
-						<li class="nav-item"><a class="nav-link" href="#home">Home</a></li>
-						<li class="nav-item"><a class="nav-link" href="#response">Emergency</a></li>
-						<li class="nav-item"><a class="nav-link" href="#first-aid">First Aid</a></li>
-						<li class="nav-item"><a class="nav-link" href="#safety">Safety</a></li>
-						<li class="nav-item"><a class="nav-link" href="#contact">Contact</a></li>
-					</ul>
-				</nav>
-				<a class="btn trailer-button" id="contact" href="login.html">Sign Out</a>
-			</div>
-		</header>
+	<header class="topbar">
+		<a class="brand" href="#overview" aria-label="RESQNET dashboard home">
+			<img class="brand-logo" src="images/bsu_logo.png" alt="Batangas State University logo">
+			<span>
+				<strong>RESQNET</strong>
+				<small>SCHOOL CLINIC ASSISTANCE</small>
+			</span>
+		</a>
+		<div class="topbar-actions">
+			<span class="demo-badge" id="api-connection" role="status" aria-live="polite"><span aria-hidden="true"></span>Connecting to API</span>
+			<a class="logout-link" href="/logout">Logout <span aria-hidden="true">↗</span></a>
+		</div>
+	</header>
 
-		<section class="hero-content d-flex align-items-center" id="home">
-			<div class="container">
-				<div class="welcome-copy">
-					<h1>Sa emergency, bawat segundo mahalaga.</h1>
-					<h2 id="first-aid">Mabilis na tulong. Mas ligtas na bukas.</h2>
-					<p id="safety">Sa oras ng aksidente o biglaang panganib, manatiling kalmado at kumilos agad. Tumawag sa 911 para sa agarang tulong; ibigay ang iyong lokasyon at malinaw na detalye ng pangyayari.</p>
+	<div class="dashboard-layout">
+		<aside class="sidebar">
+			<p class="sidebar-label">WORKSPACE</p>
+			<nav aria-label="Dashboard navigation">
+				<a class="sidebar-link is-active" href="#overview"><span aria-hidden="true">▦</span> Overview</a>
+				<a class="sidebar-link" href="#alerts"><span aria-hidden="true">♧</span> Alert list</a>
+				<a class="sidebar-link" href="#devices"><span aria-hidden="true">▣</span> Registered devices</a>
+				<a class="sidebar-link" href="#guard-contact"><span aria-hidden="true">☎</span> Guard contact</a>
+			</nav>
+		</aside>
+
+		<main class="main-content" id="overview">
+			<section class="page-heading" aria-labelledby="page-title">
+				<div>
+					<p class="eyebrow">CLINIC OPERATIONS</p>
+					<h1 id="page-title">Clinic dashboard</h1>
+					<p class="page-description">Monitor station alerts, review their details, and update response status.</p>
 				</div>
-			</div>
+				<p class="today-label"><span aria-hidden="true">◷</span> <span id="current-date"></span></p>
+			</section>
 
-			<div class="world-stage" id="response">
-				<img class="hero-image" src="images/bg.jpg" alt="Ambulansya at emergency response kit sa gabi">
-			</div>
-		</section>
-	</main>
-	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+			<section class="summary-grid" aria-label="Dashboard summary">
+				<article class="summary-card">
+					<div class="summary-icon icon-blue" aria-hidden="true">↗</div>
+					<div><p>Total alerts</p><strong id="total-alerts">0</strong><span>All recorded requests</span></div>
+				</article>
+				<article class="summary-card">
+					<div class="summary-icon icon-orange" aria-hidden="true">!</div>
+					<div><p>Needs attention</p><strong id="open-alerts">0</strong><span>New or in progress</span></div>
+				</article>
+				<article class="summary-card">
+					<div class="summary-icon icon-green" aria-hidden="true">▣</div>
+					<div><p>Registered devices</p><strong id="total-devices">0</strong><span>Alert stations in system</span></div>
+				</article>
+			</section>
+
+			<section class="alerts-section panel" id="alerts" aria-labelledby="alerts-title">
+				<div class="panel-heading">
+					<div>
+						<p class="eyebrow">INCOMING REQUESTS</p>
+						<h2 id="alerts-title">Alert list</h2>
+					</div>
+					<label class="search-box">
+						<span class="visually-hidden">Search alerts</span>
+						<span aria-hidden="true">⌕</span>
+						<input id="alert-search" type="search" placeholder="Search alerts..." autocomplete="off">
+					</label>
+				</div>
+				<div class="filter-row">
+					<p>Example rows display alert type, station location, received time, status, and demo SMS status. They are labeled EXAMPLE.</p>
+					<label class="filter-control">Status
+						<select id="status-filter" aria-label="Filter alerts by status">
+							<option value="all">All statuses</option>
+							<option value="New">New</option>
+							<option value="In progress">In progress</option>
+							<option value="Resolved">Resolved</option>
+						</select>
+					</label>
+				</div>
+				<div class="table-wrap">
+					<table class="alerts-table">
+						<thead>
+							<tr><th scope="col">Alert</th><th scope="col">Type</th><th scope="col">Station location</th><th scope="col">Received</th><th scope="col">Status</th><th scope="col">Guard SMS</th></tr>
+						</thead>
+						<tbody id="alerts-body"></tbody>
+					</table>
+					<p class="empty-state" id="empty-alerts" hidden>No alerts match your search or filter.</p>
+				</div>
+			</section>
+
+			<section class="details-panel panel" aria-labelledby="details-title">
+				<div class="panel-heading compact-heading">
+					<div>
+						<p class="eyebrow">REQUEST INFORMATION</p>
+						<h2 id="details-title">Alert details</h2>
+					</div>
+					<span id="detail-status" class="status-badge">New</span>
+				</div>
+				<div class="details-content">
+					<div class="detail-main">
+						<p class="detail-type" id="detail-type">Select an alert</p>
+						<p class="detail-id" id="detail-id">Choose an alert from the list to view its information.</p>
+						<div class="detail-grid">
+							<div><span>Building</span><strong id="detail-building">—</strong></div>
+							<div><span>Floor</span><strong id="detail-floor">—</strong></div>
+							<div><span>Device ID</span><strong id="detail-device">—</strong></div>
+							<div><span>Date &amp; time</span><strong id="detail-time">—</strong></div>
+							<div><span>Guard SMS</span><strong id="detail-sms">—</strong></div>
+						</div>
+					</div>
+					<form class="status-form" id="status-form">
+						<label for="status-update">Update alert status</label>
+						<select id="status-update" name="status">
+							<option value="New">New</option>
+							<option value="In progress">In progress</option>
+							<option value="Resolved">Resolved</option>
+						</select>
+						<button type="submit">Save status</button>
+						<p class="form-message" id="status-message" role="status" aria-live="polite">Loading alerts from the API…</p>
+					</form>
+				</div>
+			</section>
+
+			<section class="devices-section panel" id="devices" aria-labelledby="devices-title">
+				<div class="panel-heading">
+					<div>
+						<p class="eyebrow">STATION DIRECTORY</p>
+						<h2 id="devices-title">Registered device information</h2>
+					</div>
+					<span class="device-count" id="device-count">0 devices</span>
+				</div>
+				<p class="section-description">Device ID and assigned building and floor for each RESQNET alert station.</p>
+				<div class="table-wrap">
+					<table class="devices-table">
+						<thead>
+							<tr><th scope="col">Device ID</th><th scope="col">Station name</th><th scope="col">Building</th><th scope="col">Floor</th><th scope="col">Connection</th></tr>
+						</thead>
+						<tbody id="devices-body"></tbody>
+					</table>
+				</div>
+			</section>
+			<section class="guard-contact-section panel" id="guard-contact" aria-labelledby="guard-contact-title">
+				<div class="panel-heading compact-heading">
+					<div>
+						<p class="eyebrow">RESCUE NOTIFICATIONS</p>
+						<h2 id="guard-contact-title">Guard phone number</h2>
+					</div>
+				</div>
+				<p class="section-description">When a RESQNET station sends a new alert, the system texts this number with the station location.</p>
+				<form class="guard-contact-form" id="guard-contact-form">
+					<label for="guard-phone">Guard mobile number (Philippines)</label>
+					<div class="guard-contact-input">
+						<input id="guard-phone" name="phoneNumber" type="tel" inputmode="tel"
+							autocomplete="tel" placeholder="09XX XXX XXXX"
+							pattern="(09[0-9]{9}|\+639[0-9]{9}|09[0-9]{2} [0-9]{3} [0-9]{4})"
+							title="Enter a Philippine mobile number, for example 09171234567 or +639171234567."
+							maxlength="16">
+						<button type="submit" id="guard-phone-save">Save number</button>
+					</div>
+					<p class="section-description">Example: 09171234567. You can also enter +639171234567.</p>
+					<p class="form-message" id="guard-phone-message" role="status" aria-live="polite">Loading guard contact…</p>
+				</form>
+			</section>
+			<footer class="footer">RESQNET · School Clinic Assistance Alert and Monitoring System <span>Sample records are stored in SQLite</span></footer>
+		</main>
+	</div>
 </body>
 </html>
