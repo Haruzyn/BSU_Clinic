@@ -398,7 +398,12 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
             ".webp",
             ".avif",
         }
-        if filename not in WEB_FILES and not safe_image:
+        safe_face_asset = filename.startswith("vendor/face-api/") and Path(filename).suffix.lower() in {
+            ".js",
+            ".json",
+            ".bin",
+        }
+        if filename not in WEB_FILES and not safe_image and not safe_face_asset:
             return jsonify(error="File not found."), 404
         return send_from_directory(BASE_DIR, filename)
 
