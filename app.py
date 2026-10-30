@@ -10,6 +10,7 @@ import secrets
 import sqlite3
 import smtplib
 import ssl
+import unicodedata
 from contextlib import closing
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
@@ -310,7 +311,8 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
                     CHECK (status IN ('New', 'In progress', 'Resolved'))
             );
             CREATE TABLE IF NOT EXISTS guard_contacts (
-                id INTEGER PRIMARY KEY CHECK (id = 1),
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL DEFAULT '',
                 phone_number TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             );
@@ -333,7 +335,11 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
             CREATE TABLE IF NOT EXISTS admin_account (
                 email TEXT PRIMARY KEY COLLATE NOCASE,
                 first_name TEXT NOT NULL,
+                middle_name TEXT,
                 last_name TEXT NOT NULL,
+                school_id_number TEXT,
+                program TEXT,
+                id_type TEXT NOT NULL DEFAULT 'student' CHECK (id_type IN ('student', 'national')),
                 password_hash TEXT NOT NULL,
                 created_at TEXT NOT NULL
             );
@@ -363,7 +369,56 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
                 descriptor TEXT NOT NULL,
                 created_at TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS school_id_templates (
+                email TEXT PRIMARY KEY COLLATE NOCASE REFERENCES admin_account(email) ON DELETE CASCADE,
+                descriptor TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            );
             """
+        )
+        guard_contact_columns = {
+            row["name"]
+            for row in connection.execute("PRAGMA table_info(guard_contacts)")
+        }
+        if "name" not in guard_contact_columns:
+            connection.execute(
+                "ALTER TABLE guard_contacts ADD COLUMN name TEXT NOT NULL DEFAULT ''"
+            )
+        guard_table_sql = connection.execute(
+            "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'guard_contacts'"
+        ).fetchone()["sql"]
+        if "CHECK (id = 1)" in guard_table_sql:
+            connection.execute("ALTER TABLE guard_contacts RENAME TO guard_contacts_legacy")
+            connection.execute(
+                """CREATE TABLE guard_contacts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL DEFAULT '',
+                    phone_number TEXT NOT NULL UNIQUE,
+                    updated_at TEXT NOT NULL
+                )"""
+            )
+            connection.execute(
+                """INSERT INTO guard_contacts (name, phone_number, updated_at)
+                   SELECT name, phone_number, updated_at FROM guard_contacts_legacy"""
+            )
+            connection.execute("DROP TABLE guard_contacts_legacy")
+        else:
+            connection.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS idx_guard_contacts_phone "
+                "ON guard_contacts(phone_number)"
+            )
+        admin_columns = {
+            row["name"] for row in connection.execute("PRAGMA table_info(admin_account)")
+        }
+        for column in ("middle_name", "school_id_number", "program", "id_type"):
+            if column not in admin_columns:
+                connection.execute(f"ALTER TABLE admin_account ADD COLUMN {column} TEXT")
+        connection.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_admin_account_school_id "
+            "ON admin_account(school_id_number) WHERE school_id_number IS NOT NULL"
+        )
+        connection.execute(
+            "UPDATE admin_account SET id_type = 'student' WHERE id_type IS NULL"
         )
         connection.execute(
             """
@@ -417,7 +472,6 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
         password = payload.get("password")
         if not isinstance(email, str) or not isinstance(password, str):
             return jsonify(error="Enter your email and password."), 400
-
         with closing(connect_database(app.config["DATABASE"])) as connection:
             account = connection.execute(
                 "SELECT email, password_hash FROM admin_account WHERE email = ?",
@@ -425,7 +479,6 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
             ).fetchone()
         if not account or not check_password_hash(account["password_hash"], password):
             return jsonify(error="Email or password is incorrect."), 401
-
         session.clear()
         session["admin_email"] = account["email"]
         return jsonify(message="Signed in.")
@@ -624,33 +677,65 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
     @app.post("/api/auth/face/login")
     def face_login() -> Any:
         payload = request.get_json(silent=True)
-        email = payload.get("email", "").strip().lower() if isinstance(payload, dict) and isinstance(payload.get("email"), str) else ""
         descriptor = payload.get("descriptor") if isinstance(payload, dict) else None
-        if not email or not isinstance(descriptor, list) or len(descriptor) != 128 or any(
+        if not isinstance(descriptor, list) or len(descriptor) != 128 or any(
             isinstance(value, bool) or not isinstance(value, (int, float))
             or not math.isfinite(value) or abs(value) > 10
             for value in descriptor
         ):
-            return jsonify(error="Could not recognize the face. Try again or use your password."), 401
+            return jsonify(error="Scan your face and try again."), 400
         with closing(connect_database(app.config["DATABASE"])) as connection:
-            row = connection.execute(
-                "SELECT descriptor FROM face_templates WHERE email = ?", (email,)
-            ).fetchone()
-        if not row:
-            return jsonify(error="No face is enrolled for this account."), 401
+            rows = connection.execute(
+                "SELECT email, descriptor FROM face_templates"
+            ).fetchall()
+        if not rows:
+            return jsonify(error="No registered face was found. Register an account first."), 404
         try:
-            reference = json.loads(
-                face_template_cipher(app).decrypt(row["descriptor"].encode("ascii"))
-            )
+            cipher = face_template_cipher(app)
+            matches = []
+            for row in rows:
+                reference = json.loads(cipher.decrypt(row["descriptor"].encode("ascii")))
+                if not isinstance(reference, list) or len(reference) != 128:
+                    continue
+                distance = math.sqrt(sum((float(a) - float(b)) ** 2 for a, b in zip(reference, descriptor)))
+                if distance <= 0.48:
+                    matches.append((distance, row["email"]))
         except Exception:
             app.logger.exception("Could not decrypt a stored face template.")
-            return jsonify(error="Face login is unavailable. Sign in with your password."), 503
-        distance = math.sqrt(sum((float(a) - float(b)) ** 2 for a, b in zip(reference, descriptor)))
-        if distance > 0.48:
-            return jsonify(error="Face did not match. Try again or use your password."), 401
+            return jsonify(error="Face login is unavailable. Contact the administrator."), 503
+        if not matches:
+            return jsonify(error="Your camera face and ID do not match a registered account."), 401
+        email = min(matches, key=lambda match: match[0])[1]
         session.clear()
         session["admin_email"] = email
         return jsonify(message="Signed in with face recognition.")
+
+    @app.post("/api/auth/school-id/login")
+    def school_id_login() -> Any:
+        payload = request.get_json(silent=True)
+        id_number = payload.get("idNumber") if isinstance(payload, dict) else None
+        if not isinstance(id_number, str):
+            return jsonify(error="Scan a readable Student ID."), 400
+        normalized_id_number = re.sub(r"[^A-Z0-9]", "", id_number.upper())
+        if not re.fullmatch(r"[A-Z0-9]{7,20}", normalized_id_number):
+            return jsonify(error="Could not read the Student ID number. Scan it again."), 400
+        with closing(connect_database(app.config["DATABASE"])) as connection:
+            rows = connection.execute(
+                """
+                SELECT admin_account.email, admin_account.school_id_number
+                FROM admin_account
+                WHERE admin_account.id_type = 'student'
+                """,
+            ).fetchall()
+        rows = [row for row in rows if re.sub(r"[^A-Z0-9]", "", (row["school_id_number"] or "").upper()) == normalized_id_number]
+        if not rows:
+            return jsonify(error="This Student ID is not registered."), 404
+        if len(rows) > 1:
+            return jsonify(error="This Student ID is linked to more than one account. Contact the administrator."), 409
+        email = rows[0]["email"]
+        session.clear()
+        session["admin_email"] = email
+        return jsonify(message="Signed in with Student ID.")
 
     @app.post("/api/auth/send-code")
     def send_registration_code() -> Any:
@@ -781,25 +866,57 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
         email = payload.get("email")
         code = payload.get("code")
         first_name = payload.get("firstName")
+        middle_name = payload.get("middleName", "")
         last_name = payload.get("lastName")
+        school_id_number = payload.get("schoolIdNumber")
+        id_type = "student"
+        program = payload.get("program")
+        id_text = payload.get("idText")
         password = payload.get("password")
         accepted_terms = payload.get("acceptedTerms")
+        descriptor = payload.get("descriptor")
         if not all(isinstance(value, str) for value in (
-            email, code, first_name, last_name, password
+            email, code, first_name, middle_name, last_name, school_id_number, program, id_text, password
         )):
             return jsonify(error="Complete all registration fields."), 400
         if accepted_terms is not True:
             return jsonify(error="You must agree to the terms and conditions."), 400
-
+        if not isinstance(descriptor, list) or len(descriptor) != 128 or any(
+            isinstance(value, bool) or not isinstance(value, (int, float))
+            or not math.isfinite(value) or abs(value) > 10 for value in descriptor
+        ):
+            return jsonify(error="Capture your face before completing registration."), 400
         email = email.strip().lower()
         first_name = first_name.strip()
+        middle_name = middle_name.strip()
         last_name = last_name.strip()
+        school_id_number = school_id_number.strip()
+        program = program.strip()
+        id_text = id_text.strip()
         if len(email) > 254 or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
             return jsonify(error="Enter a valid email address."), 400
         if not first_name or len(first_name) > 80:
             return jsonify(error="Enter a valid first name."), 400
         if not last_name or len(last_name) > 80:
             return jsonify(error="Enter a valid last name."), 400
+        if not school_id_number or len(school_id_number) > 20:
+            return jsonify(error="Enter a valid ID number."), 400
+        if not program:
+            return jsonify(error="Enter a valid course or program."), 400
+        if len(program) > 120:
+            return jsonify(error="Enter a valid course or program."), 400
+        if len(middle_name) > 80:
+            return jsonify(error="Enter a valid middle name or initial."), 400
+        if not id_text or len(id_text) > 10000:
+            return jsonify(error="Upload a readable ID before registering."), 400
+        normalized_id_text = re.sub(
+            r"[^A-Z0-9]", "", unicodedata.normalize("NFKD", id_text).upper()
+        ).replace("O", "0").replace("Q", "0").replace("I", "1").replace("L", "1")
+        normalized_school_id = re.sub(r"[^A-Z0-9]", "", school_id_number.upper())
+        normalized_school_id = normalized_school_id.replace("O", "0").replace("Q", "0")
+        normalized_school_id = normalized_school_id.replace("I", "1").replace("L", "1")
+        if not normalized_school_id or normalized_school_id not in normalized_id_text:
+            return jsonify(error="The Student ID number could not be matched. Check the number or scan a clearer ID."), 400
         if len(password) < 8 or len(password) > 1024:
             return jsonify(error="Password must be between 8 and 1024 characters."), 400
         if not re.fullmatch(r"\d{6}", code):
@@ -847,20 +964,29 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
                 connection.execute(
                     """
                     INSERT INTO admin_account
-                        (email, first_name, last_name, password_hash, created_at)
-                    VALUES (?, ?, ?, ?, ?)
+                        (email, first_name, middle_name, last_name, school_id_number,
+                         program, id_type, password_hash, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         email,
                         first_name,
+                        middle_name or None,
                         last_name,
+                        school_id_number,
+                        program,
+                        id_type,
                         generate_password_hash(password),
                         now.isoformat(),
                     ),
                 )
+                connection.execute(
+                    "INSERT INTO face_templates (email, descriptor, created_at) VALUES (?, ?, ?)",
+                    (email, face_template_cipher(app).encrypt(json.dumps(descriptor).encode("utf-8")).decode("ascii"), now.isoformat()),
+                )
             except sqlite3.IntegrityError:
                 connection.rollback()
-                return jsonify(error="An account with this email already exists."), 409
+                return jsonify(error="This email or school ID number is already registered."), 409
 
             connection.execute(
                 "DELETE FROM registration_codes WHERE email = ?",
@@ -930,10 +1056,79 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
         if "admin_email" not in session:
             return jsonify(error="Sign in to manage the guard contact."), 401
         with closing(connect_database(app.config["DATABASE"])) as connection:
-            row = connection.execute(
-                "SELECT phone_number FROM guard_contacts WHERE id = 1"
-            ).fetchone()
-        return jsonify(phoneNumber=row["phone_number"] if row else "")
+            rows = connection.execute(
+                "SELECT id, name, phone_number FROM guard_contacts ORDER BY name COLLATE NOCASE, id"
+            ).fetchall()
+        contacts = [dict(row) for row in rows]
+        for contact in contacts:
+            contact["phoneNumber"] = contact.pop("phone_number")
+        return jsonify(
+            contacts=contacts,
+            name=contacts[0]["name"] if contacts else "",
+            phoneNumber=contacts[0]["phoneNumber"] if contacts else "",
+        )
+
+    def guard_contact_payload(payload: Any) -> tuple[str, str] | tuple[None, None]:
+        if not isinstance(payload, dict):
+            return None, None
+        name = payload.get("name")
+        phone_number = payload.get("phoneNumber")
+        if not isinstance(name, str) or not name.strip() or len(name.strip()) > 100:
+            return None, None
+        if not isinstance(phone_number, str):
+            return None, None
+        number = normalize_philippine_mobile_number(phone_number.strip())
+        return (name.strip(), number) if number else (None, None)
+
+    @app.post("/api/admin/guard-contacts")
+    def create_guard_contact() -> Any:
+        if "admin_email" not in session:
+            return jsonify(error="Sign in to manage guard contacts."), 401
+        name, phone_number = guard_contact_payload(request.get_json(silent=True))
+        if not name or not phone_number:
+            return jsonify(error="Enter a guard name and a valid Philippine mobile number."), 400
+        try:
+            with closing(connect_database(app.config["DATABASE"])) as connection:
+                cursor = connection.execute(
+                    "INSERT INTO guard_contacts (name, phone_number, updated_at) VALUES (?, ?, ?)",
+                    (name, phone_number, datetime.now(timezone.utc).isoformat()),
+                )
+                contact_id = cursor.lastrowid
+                connection.commit()
+        except sqlite3.IntegrityError:
+            return jsonify(error="That mobile number is already registered."), 409
+        return jsonify(id=contact_id, name=name, phoneNumber=phone_number), 201
+
+    @app.put("/api/admin/guard-contacts/<int:contact_id>")
+    def edit_guard_contact(contact_id: int) -> Any:
+        if "admin_email" not in session:
+            return jsonify(error="Sign in to manage guard contacts."), 401
+        name, phone_number = guard_contact_payload(request.get_json(silent=True))
+        if not name or not phone_number:
+            return jsonify(error="Enter a guard name and a valid Philippine mobile number."), 400
+        try:
+            with closing(connect_database(app.config["DATABASE"])) as connection:
+                cursor = connection.execute(
+                    "UPDATE guard_contacts SET name = ?, phone_number = ?, updated_at = ? WHERE id = ?",
+                    (name, phone_number, datetime.now(timezone.utc).isoformat(), contact_id),
+                )
+                connection.commit()
+        except sqlite3.IntegrityError:
+            return jsonify(error="That mobile number is already registered."), 409
+        if not cursor.rowcount:
+            return jsonify(error="Guard contact not found."), 404
+        return jsonify(id=contact_id, name=name, phoneNumber=phone_number)
+
+    @app.delete("/api/admin/guard-contacts/<int:contact_id>")
+    def remove_guard_contact(contact_id: int) -> Any:
+        if "admin_email" not in session:
+            return jsonify(error="Sign in to manage guard contacts."), 401
+        with closing(connect_database(app.config["DATABASE"])) as connection:
+            cursor = connection.execute("DELETE FROM guard_contacts WHERE id = ?", (contact_id,))
+            connection.commit()
+        if not cursor.rowcount:
+            return jsonify(error="Guard contact not found."), 404
+        return jsonify(message="Guard contact removed.")
 
     @app.put("/api/admin/guard-contact")
     def update_guard_contact() -> Any:
@@ -944,37 +1139,7 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
         if not isinstance(payload, dict):
             return jsonify(error="Request body must be a JSON object."), 400
 
-        phone_number = payload.get("phoneNumber")
-        if not isinstance(phone_number, str):
-            return jsonify(error="Enter a valid Philippine mobile number."), 400
-        phone_number = phone_number.strip()
-        normalized_number = (
-            normalize_philippine_mobile_number(phone_number) if phone_number else ""
-        )
-        if phone_number and normalized_number is None:
-            return jsonify(
-                error=(
-                    "Enter a Philippine mobile number as 09XXXXXXXXX or "
-                    "+639XXXXXXXXX."
-                )
-            ), 400
-
-        with closing(connect_database(app.config["DATABASE"])) as connection:
-            if normalized_number:
-                connection.execute(
-                    """
-                    INSERT INTO guard_contacts (id, phone_number, updated_at)
-                    VALUES (1, ?, ?)
-                    ON CONFLICT(id) DO UPDATE SET
-                        phone_number = excluded.phone_number,
-                        updated_at = excluded.updated_at
-                    """,
-                    (normalized_number, datetime.now(timezone.utc).isoformat()),
-                )
-            else:
-                connection.execute("DELETE FROM guard_contacts WHERE id = 1")
-            connection.commit()
-        return jsonify(phoneNumber=normalized_number)
+        return jsonify(error="Use the guard contacts list to add or edit contacts."), 400
 
     @app.post("/api/devices/<device_id>/alerts")
     def create_device_alert(device_id: str) -> Any:
@@ -1006,12 +1171,11 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
             if device is None:
                 return jsonify(error="Device not found."), 404
 
-            contact = connection.execute(
-                "SELECT phone_number FROM guard_contacts WHERE id = 1"
-            ).fetchone()
-            recipient = contact["phone_number"] if contact else None
+            contacts = connection.execute(
+                "SELECT id, phone_number FROM guard_contacts ORDER BY id"
+            ).fetchall()
             message = (
-                f"RESQNET: Rescue needed at {device['building']}, {device['floor']}. "
+                f"RESQNET: {alert_type.strip()} at {device['building']}, {device['floor']}. "
                 f"Station: {device['name']} ({device_id}). Alert: {alert_id}."
             )
             connection.execute(
@@ -1021,35 +1185,39 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
                 """,
                 (alert_id, alert_type.strip(), device_id, now.isoformat()),
             )
-            cursor = connection.execute(
-                """
-                INSERT INTO sms_logs
-                    (alert_id, recipient_number, message_content, delivery_status)
-                VALUES (?, ?, ?, ?)
-                """,
-                (
-                    alert_id,
-                    recipient,
-                    message,
-                    "Pending" if recipient else "Not configured",
-                ),
-            )
-            sms_log_id = cursor.lastrowid
+            sms_log_ids = []
+            for contact in contacts:
+                cursor = connection.execute(
+                    """INSERT INTO sms_logs
+                       (alert_id, recipient_number, message_content, delivery_status)
+                       VALUES (?, ?, ?, 'Pending')""",
+                    (alert_id, contact["phone_number"], message),
+                )
+                sms_log_ids.append((contact["phone_number"], cursor.lastrowid))
+            if not contacts:
+                connection.execute(
+                    """INSERT INTO sms_logs
+                       (alert_id, recipient_number, message_content, delivery_status)
+                       VALUES (?, NULL, ?, 'Not configured')""",
+                    (alert_id, message),
+                )
             connection.commit()
 
-        notification_error = None
+        notification_errors = []
         sms_status = "Not configured"
-        if recipient:
+        if contacts:
+            sms_status = "Sent"
+        for recipient, sms_log_id in sms_log_ids:
             try:
-                provider_sid, sms_status = send_guard_sms(app, recipient, message)
-                provider_response = f"{provider_sid} ({sms_status})"
+                provider_sid, recipient_status = send_guard_sms(app, recipient, message)
+                provider_response = f"{provider_sid} ({recipient_status})"
                 sent_at = datetime.now(timezone.utc).isoformat()
             except SmsProviderError as error:
                 app.logger.error("Guard SMS failed for alert %s: %s", alert_id, error)
-                sms_status = "Failed"
+                recipient_status = "Failed"
                 provider_response = str(error)
                 sent_at = None
-                notification_error = str(error)
+                notification_errors.append(str(error))
 
             with closing(connect_database(app.config["DATABASE"])) as connection:
                 connection.execute(
@@ -1058,9 +1226,13 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
                     SET delivery_status = ?, sent_at = ?, provider_response = ?
                     WHERE id = ?
                     """,
-                    (sms_status, sent_at, provider_response, sms_log_id),
+                    (recipient_status, sent_at, provider_response, sms_log_id),
                 )
                 connection.commit()
+            if recipient_status == "Failed":
+                sms_status = "Failed"
+            elif sms_status != "Failed":
+                sms_status = recipient_status
 
         with closing(connect_database(app.config["DATABASE"])) as connection:
             alert = connection.execute(
@@ -1078,13 +1250,13 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
             ).fetchone()
 
         response = {"alert": alert_as_dict(alert)}
-        if notification_error:
+        if notification_errors:
             response["error"] = (
-                "The alert was recorded, but the guard SMS could not be sent: "
-                f"{notification_error}"
+                "The alert was recorded, but one or more guard SMS messages could not be sent: "
+                f"{'; '.join(notification_errors)}"
             )
             return jsonify(response), 502
-        if not recipient:
+        if not contacts:
             response["error"] = (
                 "The alert was recorded, but no guard phone number is configured."
             )

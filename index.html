@@ -151,11 +151,16 @@
 				<div class="panel-heading compact-heading">
 					<div>
 						<p class="eyebrow">RESCUE NOTIFICATIONS</p>
-						<h2 id="guard-contact-title">Guard phone number</h2>
+						<h2 id="guard-contact-title">Guard contact</h2>
 					</div>
 				</div>
-				<p class="section-description">When a RESQNET station sends a new alert, the system texts this number with the station location.</p>
-				<form class="guard-contact-form" id="guard-contact-form">
+				<p class="section-description">View all registered guards, add a contact, or edit and remove an existing one.</p>
+				<div class="guard-contact-list" id="guard-contact-list" aria-live="polite"><p>Loading registered guards…</p></div>
+				<button type="button" class="guard-contact-add" id="guard-contact-add">Add guard</button>
+				<form class="guard-contact-form" id="guard-contact-form" hidden>
+					<h3 id="guard-contact-form-title">Add guard</h3>
+					<label for="guard-name">Guard name</label>
+					<input id="guard-name" name="name" type="text" autocomplete="name" maxlength="100" placeholder="Enter guard name">
 					<label for="guard-phone">Guard mobile number (Philippines)</label>
 					<div class="guard-contact-input">
 						<input id="guard-phone" name="phoneNumber" type="tel" inputmode="tel"
@@ -163,7 +168,10 @@
 							pattern="(09[0-9]{9}|\+639[0-9]{9}|09[0-9]{2} [0-9]{3} [0-9]{4})"
 							title="Enter a Philippine mobile number, for example 09171234567 or +639171234567."
 							maxlength="16">
-						<button type="submit" id="guard-phone-save">Save number</button>
+					</div>
+					<div class="guard-contact-form-actions">
+						<button type="submit" id="guard-phone-save">Save contact</button>
+						<button type="button" class="guard-contact-cancel" id="guard-contact-cancel">Cancel</button>
 					</div>
 					<p class="section-description">Example: 09171234567. You can also enter +639171234567.</p>
 					<p class="form-message" id="guard-phone-message" role="status" aria-live="polite">Loading guard contact…</p>

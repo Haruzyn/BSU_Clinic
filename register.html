@@ -11,6 +11,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
     <link rel="stylesheet" href="style.css">
+    <script src="vendor/face-api/dist/face-api.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
 </head>
 
 <body>
@@ -27,14 +29,30 @@
             <h1 id="register-title">Admin Registration</h1>
             <p class="login-description">Register to gain access to the emergency management dashboard.</p>
             <form id="registerForm" novalidate>
-                <div class="row g-3">
-                    <div class="col-md-6">
+                <p class="verification-hint register-full">Ilagay ang mga detalye gaya ng nakasulat sa iyong BatStateU school ID.</p>
+                <div class="row g-3 register-full">
+                    <div class="col-md-4">
                         <label for="firstName" class="form-label">First Name</label>
                         <input type="text" class="form-control" id="firstName" placeholder="Enter first name" required>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
+                        <label for="middleName" class="form-label">Middle Name / Initial <span class="text-muted">(optional)</span></label>
+                        <input type="text" class="form-control" id="middleName" placeholder="Enter middle name or initial" maxlength="80">
+                    </div>
+                    <div class="col-md-4">
                         <label for="lastName" class="form-label">Last Name</label>
                         <input type="text" class="form-control" id="lastName" placeholder="Enter last name" required>
+                    </div>
+                </div>
+
+                <div class="row g-3 mt-1 register-full">
+                    <div class="col-md-6" id="idNumberColumn">
+                        <label for="schoolIdNumber" class="form-label">School ID Number</label>
+                        <input type="text" class="form-control" id="schoolIdNumber" placeholder="e.g. 24-33110" maxlength="20" autocomplete="off" required>
+                    </div>
+                    <div class="col-md-6" id="programColumn">
+                        <label for="program" class="form-label">Course / Program</label>
+                        <input type="text" class="form-control" id="program" placeholder="e.g. BS Information Technology" maxlength="120" required>
                     </div>
                 </div>
 
@@ -50,15 +68,13 @@
                 <button type="button" class="btn btn-outline-success verification-button" id="sendVerificationCode">
                     Send verification code
                 </button>
-                <p class="verification-hint">Verification emails are sent using the Gmail account configured by the site administrator. The sender's Google App Password must be set in the project's private .env file; never enter your regular Gmail password here.</p>
-                <div class="verification-group" id="verificationGroup" hidden>
+                <div class="verification-group register-full" id="verificationGroup" hidden>
                     <label for="verificationCode" class="form-label">Email verification code</label>
                     <input type="text" class="form-control" id="verificationCode" inputmode="numeric"
                         autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6"
                         placeholder="Enter the 6-digit code" required>
-                    <p class="verification-hint">Check your Gmail inbox and spam folder. The code expires in 10 minutes.</p>
                 </div>
-                <p class="verification-message" id="verificationMessage" role="status" aria-live="polite"></p>
+                <p class="verification-message register-full" id="verificationMessage" role="status" aria-live="polite"></p>
 
                 <div class="mb-3">
                     <label for="register-password" class="form-label">Password <svg xmlns="http://www.w3.org/2000/svg"
@@ -74,15 +90,46 @@
                     <input type="password" class="form-control" id="confirm-password" placeholder="Re-enter your password" required>
                 </div>
 
-                <div class="form-check mb-2">
+                <div class="form-check mb-2 register-full">
                     <input class="form-check-input" type="checkbox" id="termsCheck" required>
                     <label class="form-check-label" for="termsCheck">I agree to the terms and conditions</label>
                 </div>
 
-                <button type="submit" class="btn btn-primary login-button" id="registerButton" disabled>
+                <div class="register-full mb-2">
+                    <p class="form-label mb-2" id="idMethodLabel">Student ID: choose one method</p>
+                    <div class="btn-group" role="group" aria-label="School ID method">
+                        <input type="radio" class="btn-check" name="idMethod" id="idMethodUpload" value="upload" autocomplete="off" checked>
+                        <label class="btn btn-outline-secondary" for="idMethodUpload">Upload ID</label>
+                        <input type="radio" class="btn-check" name="idMethod" id="idMethodScan" value="scan" autocomplete="off">
+                        <label class="btn btn-outline-secondary" for="idMethodScan">Scan with camera</label>
+                    </div>
+                </div>
+
+                <div class="mb-3" id="idUploadPanel">
+                    <label for="register-id" class="form-label">Upload a photo</label>
+                    <input type="file" class="form-control" id="register-id" accept="image/jpeg,image/png,image/webp">
+                </div>
+
+                <div class="mb-3" id="idScanPanel" hidden>
+                    <p class="form-label">Scan your ID with the camera</p>
+                    <video id="register-id-scan-video" autoplay muted playsinline style="width:100%;border-radius:10px;background:#171717" hidden></video>
+                    <button type="button" class="btn btn-outline-secondary verification-button" id="register-id-scan-start">Open camera</button>
+                    <button type="button" class="btn btn-outline-secondary verification-button" id="register-id-scan-capture" disabled hidden>Scan ID</button>
+                </div>
+                <p class="verification-message register-full" id="register-id-message" role="status" aria-live="polite">Choose to upload your ID or scan it with the camera.</p>
+
+                <div class="mb-3">
+                    <p class="form-label">Face recognition</p>
+                    <video id="register-video" autoplay muted playsinline style="width:100%;border-radius:10px;background:#171717" hidden></video>
+                    <p class="verification-message" id="register-face-message" role="status" aria-live="polite">Capture your face before completing registration.</p>
+                    <button type="button" class="btn btn-outline-secondary verification-button" id="register-face-start">Open camera and capture face</button>
+                    <button type="button" class="btn btn-outline-secondary verification-button" id="register-face-capture" disabled hidden>Capture face</button>
+                </div>
+
+                <button type="submit" class="btn btn-primary login-button register-full" id="registerButton" disabled>
                     Verify code and register
                 </button>
-                <p class="auth-switch">
+                <p class="auth-switch register-full">
                     Already have an account?
                     <a href="login.html">Login here</a>
                 </p>
@@ -95,17 +142,406 @@
     <script>
         const form = document.getElementById('registerForm');
         const firstName = document.getElementById('firstName');
+        const middleName = document.getElementById('middleName');
         const lastName = document.getElementById('lastName');
+        const schoolIdNumber = document.getElementById('schoolIdNumber');
+        const program = document.getElementById('program');
         const email = document.getElementById('register-email');
         const password = document.getElementById('register-password');
         const confirmPassword = document.getElementById('confirm-password');
         const terms = document.getElementById('termsCheck');
+        const idFile = document.getElementById('register-id');
+        const idMethodInputs = document.querySelectorAll('input[name="idMethod"]');
+        const idUploadPanel = document.getElementById('idUploadPanel');
+        const idScanPanel = document.getElementById('idScanPanel');
+        const idScanVideo = document.getElementById('register-id-scan-video');
+        const idScanStartButton = document.getElementById('register-id-scan-start');
+        const idScanCaptureButton = document.getElementById('register-id-scan-capture');
+        const idMessage = document.getElementById('register-id-message');
         const verificationCode = document.getElementById('verificationCode');
         const verificationGroup = document.getElementById('verificationGroup');
         const verificationMessage = document.getElementById('verificationMessage');
         const sendCodeButton = document.getElementById('sendVerificationCode');
         const registerButton = document.getElementById('registerButton');
         let resendTimer;
+        let faceDescriptor = null;
+        let idOcrText = '';
+        let idOcrWorker = null;
+        let idScanStream = null;
+        let idInputGeneration = 0;
+        let faceStream = null;
+        let registerModelsReady = false;
+        const faceVideo = document.getElementById('register-video');
+        const faceStartButton = document.getElementById('register-face-start');
+        const faceCaptureButton = document.getElementById('register-face-capture');
+        const faceMessage = document.getElementById('register-face-message');
+        function autofillSchoolIdInformation(text) {
+            const lines = text.split(/\r?\n/).map(line => line.toLocaleUpperCase()
+                .replace(/[^A-Z0-9.' -]/g, ' ').replace(/\s+/g, ' ').trim()).filter(Boolean);
+            const ignoredNameLine = /BATANGAS|STATE UNIVERSITY|NATIONAL|ENGINEERING UNIVERSITY|SCHOOL CLINIC|ASSISTANCE|RESQNET|INFORMATION|TECHNOLOGY|\bBS\b|ID NO|WWW|EDU PH/;
+            const normalizedLines = lines.map(line => line.replace(/[^A-Z0-9]/g, ''));
+            const programLineIndex = normalizedLines.findIndex(line =>
+                line.includes('BSINFORMATIONTECHNOLOGY')
+                || (line.includes('INFORMATION') && line.includes('TECHNOLOGY'))
+                || (/^(BS|BA|BSC|BSE|BSIT|BACHELOR)/.test(line) && /INFORMATION|TECHNOLOGY/.test(line))
+            );
+            let programText = '';
+            if (programLineIndex >= 0) {
+                programText = normalizedLines[programLineIndex].includes('BSINFORMATIONTECHNOLOGY')
+                    ? 'BS Information Technology'
+                    : lines[programLineIndex];
+            }
+
+            let nameFilled = false;
+            const idLabelIndex = lines.findIndex(line => /\bID\b/.test(line) && /\b(NO|NUMBER)\b/.test(line));
+            const nameBlockEnd = programLineIndex >= 0 ? programLineIndex : idLabelIndex;
+            if (nameBlockEnd > 0) {
+                const blockStart = Math.max(0, nameBlockEnd - 5);
+                // Read upward from the course line so unrelated text above the
+                // card's printed name (such as OCR noise) is not mistaken for it.
+                for (let lineIndex = nameBlockEnd - 1; lineIndex >= blockStart; lineIndex -= 1) {
+                    const line = lines[lineIndex];
+                    if (ignoredNameLine.test(line)) continue;
+                    const words = line.match(/[A-Z]+/g) || [];
+
+                    // Some OCR results merge both printed name rows into one line:
+                    // GIVEN NAMES + MIDDLE INITIAL + SURNAME.
+                    if (words.length >= 4 && words[words.length - 2].length === 1
+                        && words[words.length - 1].length >= 3) {
+                        const givenNames = words.slice(0, -2);
+                        if (givenNames.length >= 2 && givenNames.every(word => word.length >= 2)) {
+                            firstName.value = givenNames.join(' ');
+                            middleName.value = words[words.length - 2];
+                            lastName.value = words[words.length - 1];
+                            nameFilled = true;
+                            break;
+                        }
+                    }
+
+                    // Or OCR may preserve the card's two separate name rows.
+                    if (words.length < 3 || words[words.length - 1].length !== 1) continue;
+                    const nextLine = lines[lineIndex + 1] || '';
+                    if (ignoredNameLine.test(nextLine)) continue;
+                    const surnameWords = nextLine.match(/[A-Z]+/g) || [];
+                    const givenNames = words.slice(0, -1);
+                    if (surnameWords.length !== 1 || surnameWords[0].length < 3
+                        || givenNames.length < 2 || givenNames.some(word => word.length < 2)) continue;
+                    firstName.value = givenNames.join(' ');
+                    middleName.value = words[words.length - 1];
+                    lastName.value = surnameWords[0];
+                    nameFilled = true;
+                    break;
+                }
+            }
+
+            const idLineIndex = lines.findIndex(line => /\bID\b/.test(line) && /\b(NO|NUMBER)\b/.test(line));
+            const idSearchText = (idLineIndex >= 0 ? lines.slice(idLineIndex, idLineIndex + 3) : lines).join(' ')
+                .replace(/[OQ]/g, '0').replace(/[IL]/g, '1');
+            const idMatch = idSearchText.match(/\b\d{2}[- ]?\d{5}\b/);
+            if (idMatch) schoolIdNumber.value = idMatch[0].replace(/\s/g, '-');
+
+            if (programText) program.value = programText;
+
+            return Boolean(idMatch);
+        }
+
+        async function processSchoolIdFile(file) {
+            const generation = ++idInputGeneration;
+            idOcrText = '';
+            if (!file) return;
+            if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 8 * 1024 * 1024) {
+                throw new Error('Choose a JPG, PNG, or WebP image under 8 MB.');
+            }
+            if (!window.Tesseract) throw new Error('ID text recognition did not load. Check your internet connection, refresh, and try again.');
+            idMessage.textContent = 'Reading the school ID text…';
+            idMessage.classList.remove('is-error', 'is-success');
+            if (!idOcrWorker) idOcrWorker = await Tesseract.createWorker('eng');
+            const ocrResult = await idOcrWorker.recognize(file);
+            if (generation !== idInputGeneration) return;
+            const imageUrlForOcr = URL.createObjectURL(file);
+            let enhancedImage;
+            try {
+                const sourceImage = new Image();
+                sourceImage.src = imageUrlForOcr;
+                await sourceImage.decode();
+                const scale = Math.min(1.5, 3200 / Math.max(sourceImage.naturalWidth, sourceImage.naturalHeight));
+                enhancedImage = document.createElement('canvas');
+                enhancedImage.width = Math.max(1, Math.round(sourceImage.naturalWidth * scale));
+                enhancedImage.height = Math.max(1, Math.round(sourceImage.naturalHeight * scale));
+                const context = enhancedImage.getContext('2d', { willReadFrequently: true });
+                context.drawImage(sourceImage, 0, 0, enhancedImage.width, enhancedImage.height);
+                const pixels = context.getImageData(0, 0, enhancedImage.width, enhancedImage.height);
+                for (let i = 0; i < pixels.data.length; i += 4) {
+                    const gray = 0.299 * pixels.data[i] + 0.587 * pixels.data[i + 1] + 0.114 * pixels.data[i + 2];
+                    const highContrast = Math.max(0, Math.min(255, (gray - 128) * 1.35 + 128));
+                    pixels.data[i] = pixels.data[i + 1] = pixels.data[i + 2] = highContrast;
+                }
+                context.putImageData(pixels, 0, 0);
+            } finally {
+                URL.revokeObjectURL(imageUrlForOcr);
+            }
+            const enhancedOcrResult = await idOcrWorker.recognize(enhancedImage);
+            if (generation !== idInputGeneration) return;
+            idOcrText = [ocrResult.data.text, enhancedOcrResult.data.text].filter(Boolean).join('\n');
+            if (!idOcrText.trim()) throw new Error('Could not read the text on the ID. Try a clearer photo or scan.');
+            const allDetailsFilled = autofillSchoolIdInformation(idOcrText);
+            idMessage.textContent = allDetailsFilled
+                ? 'Student ID number was read. Review the fields before continuing.'
+                : 'Student ID number could not be read automatically. Enter it manually; only the Student ID number is matched.';
+            idMessage.classList.remove('is-error');
+            idMessage.classList.add('is-success');
+        }
+
+        idFile.addEventListener('change', async () => {
+            try {
+                await processSchoolIdFile(idFile.files[0]);
+            } catch (error) {
+                idOcrText = '';
+                    idMessage.textContent = error.message || 'Could not read this school ID.';
+                idMessage.classList.add('is-error');
+                idFile.value = '';
+            }
+        });
+
+        async function stopIdScan() {
+            if (idScanStream) idScanStream.getTracks().forEach(track => track.stop());
+            idScanStream = null;
+            idScanVideo.srcObject = null;
+            idScanVideo.hidden = true;
+            idScanCaptureButton.hidden = true;
+            idScanCaptureButton.disabled = true;
+            idScanStartButton.disabled = false;
+        }
+
+        idMethodInputs.forEach(input => input.addEventListener('change', async () => {
+            idInputGeneration += 1;
+            await stopIdScan();
+            idOcrText = '';
+            idFile.value = '';
+            idUploadPanel.hidden = input.value !== 'upload';
+            idScanPanel.hidden = input.value !== 'scan';
+            idMessage.textContent = input.value === 'upload'
+                ? 'Upload a clear photo of your school ID.'
+                : 'Open the camera and scan your school ID.';
+            idMessage.classList.remove('is-error', 'is-success');
+        }));
+
+        idScanStartButton.addEventListener('click', async () => {
+            idScanStartButton.disabled = true;
+            idMessage.textContent = 'Opening camera…';
+            idMessage.classList.remove('is-error', 'is-success');
+            try {
+                idScanStream = await acquireRegisterCamera(true);
+                idScanVideo.srcObject = idScanStream;
+                idScanVideo.hidden = false;
+                await idScanVideo.play();
+                idScanCaptureButton.hidden = false;
+                idScanCaptureButton.disabled = false;
+                idMessage.textContent = 'Center the whole ID in view, hold it steady, then select Scan ID.';
+            } catch (error) {
+                await stopIdScan();
+                idMessage.textContent = registerCameraErrorMessage(error);
+                idMessage.classList.add('is-error');
+            }
+        });
+
+        idScanCaptureButton.addEventListener('click', async () => {
+            idScanCaptureButton.disabled = true;
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = idScanVideo.videoWidth;
+                canvas.height = idScanVideo.videoHeight;
+                if (!canvas.width || !canvas.height) throw new Error('Camera is not ready. Try again.');
+                canvas.getContext('2d').drawImage(idScanVideo, 0, 0, canvas.width, canvas.height);
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
+                if (!blob) throw new Error('Could not capture the ID. Try again.');
+                const scannedId = new File([blob], 'school-id-scan.jpg', { type: 'image/jpeg' });
+                await stopIdScan();
+                await processSchoolIdFile(scannedId);
+            } catch (error) {
+                await stopIdScan();
+                idOcrText = '';
+                    idMessage.textContent = error.message || 'Could not read the scanned school ID.';
+                idMessage.classList.add('is-error');
+            }
+        });
+
+        async function stopRegisterCamera() {
+            if (faceStream) faceStream.getTracks().forEach(track => track.stop());
+            faceStream = null;
+            faceVideo.srcObject = null;
+        }
+
+        function normalizeIdText(value) {
+            return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+        }
+
+        function hasSmallOcrTypo(expected, actual) {
+            if (expected === actual) return true;
+            if (expected.length < 5 || Math.abs(expected.length - actual.length) > 1) return false;
+            let expectedIndex = 0;
+            let actualIndex = 0;
+            let edits = 0;
+            while (expectedIndex < expected.length && actualIndex < actual.length) {
+                if (expected[expectedIndex] === actual[actualIndex]) {
+                    expectedIndex += 1;
+                    actualIndex += 1;
+                } else if (++edits > 1) {
+                    return false;
+                } else if (expected.length > actual.length) {
+                    expectedIndex += 1;
+                } else if (expected.length < actual.length) {
+                    actualIndex += 1;
+                } else {
+                    expectedIndex += 1;
+                    actualIndex += 1;
+                }
+            }
+            if (expectedIndex < expected.length || actualIndex < actual.length) edits += 1;
+            return edits <= 1;
+        }
+
+        function getIdInformationMismatch() {
+            if (!idOcrText) return 'Upload or scan a readable Student ID before registering.';
+            const expectedId = normalizeIdText(schoolIdNumber.value.trim())
+                .replace(/[OQ]/g, '0').replace(/[IL]/g, '1');
+            const recognizedIdText = normalizeIdText(idOcrText)
+                .replace(/[OQ]/g, '0').replace(/[IL]/g, '1');
+            if (!expectedId || !recognizedIdText.includes(expectedId)) {
+                return 'The Student ID number could not be matched. Check the number or scan a clearer ID.';
+            }
+            return '';
+        }
+        window.addEventListener('pagehide', () => {
+            if (idOcrWorker) idOcrWorker.terminate();
+            stopIdScan();
+        });
+
+        async function acquireRegisterCamera(forIdScan = false) {
+            if (!navigator.mediaDevices?.getUserMedia) {
+                throw new Error('Camera access is unavailable. Open this site on HTTPS or localhost and use a supported browser.');
+            }
+            const cameraWidth = forIdScan ? 1920 : 640;
+            const cameraHeight = forIdScan ? 1080 : 480;
+            try {
+                const initialStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: { ideal: forIdScan ? 'environment' : 'user' },
+                        width: { ideal: cameraWidth },
+                        height: { ideal: cameraHeight }
+                    },
+                    audio: false
+                });
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const currentId = initialStream.getVideoTracks()[0]?.getSettings().deviceId;
+                const physicalCamera = devices.find(device => device.kind === 'videoinput'
+                    && device.deviceId !== currentId
+                    && !/obs|virtual/i.test(device.label));
+                if (physicalCamera) {
+                    try {
+                        const physicalStream = await navigator.mediaDevices.getUserMedia({
+                            video: {
+                                deviceId: { exact: physicalCamera.deviceId },
+                                width: { ideal: cameraWidth },
+                                height: { ideal: cameraHeight }
+                            },
+                            audio: false
+                        });
+                        initialStream.getTracks().forEach(track => track.stop());
+                        return physicalStream;
+                    } catch (_) {
+                        // Keep the working stream if the preferred physical camera cannot start.
+                    }
+                }
+                return initialStream;
+            } catch (firstError) {
+                if (!navigator.mediaDevices.enumerateDevices) throw firstError;
+                const cameras = (await navigator.mediaDevices.enumerateDevices()).filter(device => device.kind === 'videoinput');
+                for (const camera of cameras) {
+                    try {
+                        return await navigator.mediaDevices.getUserMedia({
+                            video: {
+                                deviceId: { exact: camera.deviceId },
+                                width: { ideal: cameraWidth },
+                                height: { ideal: cameraHeight }
+                            },
+                            audio: false
+                        });
+                    } catch (_) {
+                        // Try another available camera before reporting the failure.
+                    }
+                }
+                throw firstError;
+            }
+        }
+
+        function registerCameraErrorMessage(error) {
+            if (error.name === 'NotAllowedError' || error.name === 'SecurityError') {
+                return 'Allow camera access for this site in your browser settings, then refresh the page.';
+            }
+            if (error.name === 'NotReadableError' || error.name === 'AbortError') {
+                return 'The camera could not start. Close apps using the camera (such as Zoom or Teams), reconnect it, then try again.';
+            }
+            if (error.name === 'NotFoundError' || error.name === 'OverconstrainedError') {
+                return 'No usable camera was found. Connect or enable a camera, then try again.';
+            }
+            return error.message || 'Could not open the camera.';
+        }
+
+        faceStartButton.addEventListener('click', async () => {
+            if (idScanStream) await stopIdScan();
+            faceStartButton.disabled = true;
+            try {
+                if (!window.faceapi) throw new Error('Face recognition library did not load. Refresh and try again.');
+                if (!registerModelsReady) {
+                    await Promise.all([
+                        faceapi.nets.tinyFaceDetector.loadFromUri('/vendor/face-api/model'),
+                        faceapi.nets.faceLandmark68Net.loadFromUri('/vendor/face-api/model'),
+                        faceapi.nets.faceRecognitionNet.loadFromUri('/vendor/face-api/model')
+                    ]);
+                    registerModelsReady = true;
+                }
+                faceStream = await acquireRegisterCamera();
+                faceVideo.srcObject = faceStream;
+                faceVideo.hidden = false;
+                await faceVideo.play();
+                faceCaptureButton.hidden = false;
+                faceCaptureButton.disabled = false;
+                const activeCamera = faceStream.getVideoTracks()[0]?.label || '';
+                faceMessage.textContent = /obs|virtual/i.test(activeCamera)
+                    ? 'OBS Virtual Camera is active. Start OBS Virtual Camera with your webcam visible, or close OBS and try again.'
+                    : 'Camera ready. Look at the camera and capture your face.';
+            } catch (error) {
+                await stopRegisterCamera();
+                faceVideo.hidden = true;
+                faceCaptureButton.hidden = true;
+                faceMessage.textContent = registerCameraErrorMessage(error);
+                faceMessage.classList.add('is-error');
+                faceStartButton.disabled = false;
+            }
+        });
+
+        faceCaptureButton.addEventListener('click', async () => {
+            faceCaptureButton.disabled = true;
+            try {
+                const faces = await faceapi.detectAllFaces(faceVideo, new faceapi.TinyFaceDetectorOptions())
+                    .withFaceLandmarks().withFaceDescriptors();
+                if (faces.length !== 1) throw new Error(faces.length ? 'Only one face should be visible.' : 'No face detected. Improve lighting and look at the camera.');
+                faceDescriptor = Array.from(faces[0].descriptor);
+                await stopRegisterCamera();
+                faceVideo.hidden = true;
+                faceMessage.textContent = 'Face captured for face-login. It does not need to match the photo on your ID.';
+                faceMessage.classList.remove('is-error');
+                faceCaptureButton.hidden = true;
+                faceStartButton.textContent = 'Retake face';
+                faceStartButton.disabled = false;
+            } catch (error) {
+                faceMessage.textContent = error.message || 'Could not capture face.';
+                faceMessage.classList.add('is-error');
+                faceCaptureButton.disabled = false;
+            }
+        });
+        window.addEventListener('pagehide', stopRegisterCamera);
 
         function showError(input, message) {
             input.classList.add('is-invalid');
@@ -142,6 +578,8 @@
         function validateRegistrationFields() {
             let isValid = true;
             isValid = validateField(firstName, firstName.value.trim() !== '', 'First name is required.') && isValid;
+            isValid = validateField(schoolIdNumber, schoolIdNumber.value.trim() !== '', 'ID number is required.') && isValid;
+            isValid = validateField(program, program.value.trim() !== '', 'Course or program is required.') && isValid;
             isValid = validateField(lastName, lastName.value.trim() !== '', 'Last name is required.') && isValid;
             isValid = validateField(email, email.value.trim() !== '' && email.checkValidity(), 'Please enter a valid admin email.') && isValid;
             isValid = validateField(password, password.value.length >= 8, 'Password must be at least 8 characters long.') && isValid;
@@ -214,14 +652,21 @@
             event.preventDefault();
 
             const fieldsAreValid = validateRegistrationFields();
+            if (!fieldsAreValid) return;
+            const idInformationMismatch = getIdInformationMismatch();
+            if (idInformationMismatch) {
+                idMessage.textContent = idInformationMismatch;
+                idMessage.classList.add('is-error');
+                return;
+            }
             const codeIsValid = validateField(
                 verificationCode,
                 /^\d{6}$/.test(verificationCode.value.trim()),
                 'Enter the 6-digit code sent to your email.'
             );
-            if (!fieldsAreValid || !codeIsValid || registerButton.disabled) {
-                if (registerButton.disabled) {
-                    verificationMessage.textContent = 'Send a verification code to your email before registering.';
+            if (!fieldsAreValid || !codeIsValid || registerButton.disabled || !faceDescriptor) {
+                if (registerButton.disabled || !faceDescriptor) {
+                    verificationMessage.textContent = !faceDescriptor ? 'Capture your face before registering.' : 'Send a verification code to your email before registering.';
                     verificationMessage.classList.add('is-error');
                 }
                 return;
@@ -237,11 +682,16 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         firstName: firstName.value.trim(),
+                        middleName: middleName.value.trim(),
                         lastName: lastName.value.trim(),
+                        schoolIdNumber: schoolIdNumber.value.trim(),
+                        program: program.value.trim(),
+                        idText: idOcrText,
                         email: email.value.trim(),
                         password: password.value,
                         code: verificationCode.value.trim(),
-                        acceptedTerms: terms.checked
+                        acceptedTerms: terms.checked,
+                        descriptor: faceDescriptor,
                     })
                 });
                 const result = await response.json();

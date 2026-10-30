@@ -27,9 +27,52 @@ const statusMessage = document.querySelector('#status-message');
 const statusButton = statusForm.querySelector('button');
 const apiConnection = document.querySelector('#api-connection');
 const guardContactForm = document.querySelector('#guard-contact-form');
+const guardNameInput = document.querySelector('#guard-name');
 const guardPhoneInput = document.querySelector('#guard-phone');
 const guardPhoneMessage = document.querySelector('#guard-phone-message');
 const guardPhoneButton = document.querySelector('#guard-phone-save');
+const guardContactList = document.querySelector('#guard-contact-list');
+const guardContactAddButton = document.querySelector('#guard-contact-add');
+const guardContactFormTitle = document.querySelector('#guard-contact-form-title');
+const guardContactCancelButton = document.querySelector('#guard-contact-cancel');
+let guardContacts = [];
+let editingGuardContactId = null;
+
+function renderGuardContacts() {
+	if (!guardContacts.length) {
+		guardContactList.innerHTML = '<p class="guard-contact-empty">No guards registered yet.</p>';
+		return;
+	}
+	guardContactList.innerHTML = guardContacts.map((contact) => `
+		<article class="guard-contact-card">
+			<div><span>Guard name</span><strong>${escapeHtml(contact.name)}</strong></div>
+			<div><span>Mobile number</span><strong>${escapeHtml(formatPhilippineMobileNumber(contact.phoneNumber))}</strong></div>
+			<div class="guard-contact-card-actions">
+				<button type="button" data-guard-edit="${contact.id}">Edit</button>
+				<button type="button" data-guard-delete="${contact.id}">Remove</button>
+			</div>
+		</article>
+	`).join('');
+}
+
+function openGuardContactForm(contact = null) {
+	editingGuardContactId = contact?.id ?? null;
+	guardContactFormTitle.textContent = contact ? 'Edit guard contact' : 'Add guard';
+	guardPhoneButton.textContent = contact ? 'Save changes' : 'Add guard';
+	guardNameInput.value = contact?.name || '';
+	guardPhoneInput.value = contact ? formatPhilippineMobileNumber(contact.phoneNumber) : '';
+	guardContactForm.hidden = false;
+	guardContactAddButton.hidden = true;
+	guardPhoneMessage.textContent = '';
+	guardNameInput.focus();
+}
+
+function closeGuardContactForm() {
+	guardContactForm.reset();
+	guardContactForm.hidden = true;
+	guardContactAddButton.hidden = false;
+	editingGuardContactId = null;
+}
 
 function escapeHtml(value) {
 	return String(value).replace(/[&<>"']/g, (character) => ({
@@ -177,13 +220,31 @@ function renderDevices() {
 			<td><span class="connection ${device.online ? '' : 'offline'}">${device.online ? 'Online' : 'Offline'}</span></td>
 		</tr>
 	`).join('');
-	document.querySelector('#total-devices').textContent = String(devices.length);
+	animateCount(document.querySelector('#total-devices'), devices.length);
 	document.querySelector('#device-count').textContent = `${devices.length} devices`;
 }
 
+function animateCount(element, target) {
+	const start = Number.parseInt(element.textContent, 10) || 0;
+	if (start === target) return;
+	if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+		element.textContent = String(target);
+		return;
+	}
+	const duration = 680;
+	const startedAt = performance.now();
+	function frame(now) {
+		const progress = Math.min((now - startedAt) / duration, 1);
+		const eased = 1 - Math.pow(1 - progress, 3);
+		element.textContent = String(Math.round(start + (target - start) * eased));
+		if (progress < 1) requestAnimationFrame(frame);
+	}
+	requestAnimationFrame(frame);
+}
+
 function renderSummary() {
-	document.querySelector('#total-alerts').textContent = String(alerts.length);
-	document.querySelector('#open-alerts').textContent = String(
+	animateCount(document.querySelector('#total-alerts'), alerts.length);
+	animateCount(document.querySelector('#open-alerts'),
 		alerts.filter((alert) => alert.status !== 'Resolved').length
 	);
 }
@@ -236,26 +297,61 @@ guardContactForm.addEventListener('submit', async (event) => {
 	if (!guardContactForm.reportValidity()) return;
 
 	guardPhoneButton.disabled = true;
-	guardPhoneMessage.textContent = 'Saving guard number…';
+	guardPhoneMessage.textContent = 'Saving guard contact…';
 	guardPhoneMessage.classList.remove('is-success');
 	try {
-		const result = await apiRequest('/api/admin/guard-contact', {
-			method: 'PUT',
+		const result = await apiRequest(editingGuardContactId
+			? `/api/admin/guard-contacts/${editingGuardContactId}`
+			: '/api/admin/guard-contacts', {
+			method: editingGuardContactId ? 'PUT' : 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ phoneNumber: guardPhoneInput.value.trim() })
+			body: JSON.stringify({
+				name: guardNameInput.value.trim(),
+				phoneNumber: guardPhoneInput.value.trim()
+			})
 		});
-		guardPhoneInput.value = formatPhilippineMobileNumber(result.phoneNumber);
-		guardPhoneMessage.textContent = result.phoneNumber
-			? 'Guard number saved. New station alerts will be sent to this number.'
-			: 'Guard number removed. New station alerts will not send an SMS.';
+		guardPhoneMessage.textContent = `Saved ${result.name}.`;
 		guardPhoneMessage.classList.add('is-success');
+		await loadGuardContacts();
+		closeGuardContactForm();
 	} catch (error) {
-		guardPhoneMessage.textContent = `Could not save guard number: ${error.message}`;
+		guardPhoneMessage.textContent = `Could not save guard contact: ${error.message}`;
 		guardPhoneMessage.classList.remove('is-success');
 	} finally {
 		guardPhoneButton.disabled = false;
 	}
 });
+
+guardContactAddButton.addEventListener('click', () => openGuardContactForm());
+guardContactCancelButton.addEventListener('click', closeGuardContactForm);
+
+guardContactList.addEventListener('click', async (event) => {
+	const editButton = event.target.closest('[data-guard-edit]');
+	const deleteButton = event.target.closest('[data-guard-delete]');
+	if (editButton) {
+		const contact = guardContacts.find((item) => item.id === Number(editButton.dataset.guardEdit));
+		if (contact) openGuardContactForm(contact);
+	}
+	if (deleteButton) {
+		const contactId = Number(deleteButton.dataset.guardDelete);
+		const contact = guardContacts.find((item) => item.id === contactId);
+		if (!contact) return;
+		if (!window.confirm(`Remove ${contact.name} from registered guards?`)) return;
+		deleteButton.disabled = true;
+		try {
+			await apiRequest(`/api/admin/guard-contacts/${contactId}`, { method: 'DELETE' });
+			await loadGuardContacts();
+		} catch (error) {
+			guardPhoneMessage.textContent = `Could not remove guard: ${error.message}`;
+		}
+	}
+});
+
+async function loadGuardContacts() {
+	const result = await apiRequest('/api/admin/guard-contact');
+	guardContacts = result.contacts || [];
+	renderGuardContacts();
+}
 
 statusForm.addEventListener('submit', async (event) => {
 	event.preventDefault();
@@ -296,15 +392,14 @@ statusForm.addEventListener('submit', async (event) => {
 async function loadDashboard() {
 	statusMessage.textContent = 'Loading dashboard data from the API…';
 	try {
-		const [alertsResponse, devicesResponse, guardContact] = await Promise.all([
+		const [alertsResponse, devicesResponse] = await Promise.all([
 			apiRequest('/api/alerts'),
-			apiRequest('/api/devices'),
-			apiRequest('/api/admin/guard-contact')
+			apiRequest('/api/devices')
 		]);
+		await loadGuardContacts();
 		demoMode = false;
 		alerts = alertsResponse;
 		devices = devicesResponse;
-		guardPhoneInput.value = formatPhilippineMobileNumber(guardContact.phoneNumber);
 		selectedAlertId = alerts[0]?.id ?? null;
 		renderAlerts();
 		renderDetails();
@@ -312,9 +407,6 @@ async function loadDashboard() {
 		renderSummary();
 		setApiConnection(true);
 		statusMessage.textContent = 'Status changes are saved to the SQLite database.';
-		guardPhoneMessage.textContent = guardContact.phoneNumber
-			? 'Saved guard contact is ready for new alerts.'
-			: 'No guard number is saved yet.';
 	} catch (error) {
 		setApiConnection(false);
 		showLoadError(error);
